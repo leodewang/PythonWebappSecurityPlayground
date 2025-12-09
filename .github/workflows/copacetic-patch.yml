@@ -1,0 +1,83 @@
+name: Copacetic Vulnerability Patching
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Run weekly on Monday at 3 AM UTC
+    - cron: '0 3 * * 1'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  patch-vulnerabilities:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Build Docker image
+      run: |
+        docker build -t python-webapp:original .
+        
+    - name: Run Trivy scan to get vulnerability report
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'python-webapp:original'
+        format: 'json'
+        output: 'trivy-report.json'
+        
+    - name: Install Copacetic
+      run: |
+        # Install copa CLI
+        wget https://github.com/project-copacetic/copacetic/releases/latest/download/copa_0.7.0_linux_amd64.tar.gz
+        tar -xzf copa_0.7.0_linux_amd64.tar.gz
+        sudo mv copa /usr/local/bin/
+        copa --version
+        
+    - name: Install buildkit
+      run: |
+        # Start buildkitd in background
+        docker run --detach --rm --privileged -p 127.0.0.1:8888:8888/tcp --name buildkitd moby/buildkit:latest --addr tcp://0.0.0.0:8888
+        
+    - name: Patch vulnerabilities with Copa
+      run: |
+        # Export image to tar
+        docker save python-webapp:original -o python-webapp.tar
+        
+        # Patch the image
+        copa patch \
+          -i python-webapp.tar \
+          -r trivy-report.json \
+          -t python-webapp:patched \
+          -a tcp://127.0.0.1:8888 || echo "Copa patching completed with status: $?"
+        
+    - name: Scan patched image
+      uses: aquasecurity/trivy-action@master
+      if: always()
+      with:
+        image-ref: 'python-webapp:patched'
+        format: 'table'
+        severity: 'CRITICAL,HIGH'
+        
+    - name: Compare vulnerability counts
+      if: always()
+      run: |
+        echo "Original image vulnerabilities:"
+        docker run --rm aquasec/trivy image --severity CRITICAL,HIGH python-webapp:original 2>/dev/null | grep Total || true
+        
+        echo "Patched image vulnerabilities:"
+        docker run --rm aquasec/trivy image --severity CRITICAL,HIGH python-webapp:patched 2>/dev/null | grep Total || true
+        
+    - name: Cleanup
+      if: always()
+      run: |
+        docker stop buildkitd || true

@@ -1,0 +1,41 @@
+name: CI - Build and Test
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Test application
+      run: |
+        python -c "import app; print('Application imports successfully')"
+        
+    - name: Build Docker image
+      run: |
+        docker build -t python-webapp:test .
+        
+    - name: Test Docker container
+      run: |
+        docker run -d -p 8080:8080 --name test-container python-webapp:test
+        sleep 5
+        curl -f http://localhost:8080/health || exit 1
+        docker stop test-container
+        docker rm test-container
