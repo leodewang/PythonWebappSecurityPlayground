@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: python-webapp-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: python-webapp
+  template:
+    metadata:
+      labels:
+        app: python-webapp
+    spec:
+      containers:
+      - name: python-webapp
+        image: <ACR_LOGIN_SERVER>/python-webapp-security:latest
+        ports:
+        - containerPort: 5000
+        env:
+        - name: APP_VERSION
+          value: "0.1.0"
