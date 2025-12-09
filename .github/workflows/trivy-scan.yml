@@ -1,0 +1,61 @@
+name: Trivy Security Scan
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+jobs:
+  trivy-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Build Docker image for scanning
+      run: |
+        docker build -t python-webapp:scan .
+    
+    - name: Run Trivy vulnerability scanner on filesystem
+      uses: aquasecurity/trivy-action@0.28.0
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-fs-results.sarif'
+        
+    - name: Run Trivy vulnerability scanner on Docker image
+      uses: aquasecurity/trivy-action@0.28.0
+      with:
+        image-ref: 'python-webapp:scan'
+        format: 'sarif'
+        output: 'trivy-image-results.sarif'
+        
+    - name: Upload Trivy filesystem results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: 'trivy-fs-results.sarif'
+        category: 'trivy-filesystem'
+        
+    - name: Upload Trivy image results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: 'trivy-image-results.sarif'
+        category: 'trivy-image'
+        
+    - name: Run Trivy vulnerability scanner (Table format)
+      uses: aquasecurity/trivy-action@0.28.0
+      with:
+        image-ref: 'python-webapp:scan'
+        format: 'table'
+        severity: 'CRITICAL,HIGH'
