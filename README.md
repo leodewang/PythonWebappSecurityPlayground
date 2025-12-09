@@ -32,6 +32,10 @@ A comprehensive container security playground demonstrating the holistic process
 
 **📋 For detailed setup instructions, see [SETUP.md](SETUP.md)**
 
+**📚 For workflow documentation, see [WORKFLOWS.md](WORKFLOWS.md)**
+
+**🏗️ For architecture overview, see [ARCHITECTURE.md](ARCHITECTURE.md)**
+
 The setup guide includes:
 - Step-by-step Azure resource creation
 - GitHub secrets configuration
