@@ -80,6 +80,10 @@ Configure the following secrets in your GitHub repository (Settings → Secrets 
 
 ## Workflows
 
+**📚 For detailed workflow documentation, see [WORKFLOWS.md](WORKFLOWS.md)**
+
+The repository includes four GitHub Actions workflows:
+
 ### 1. CI - Build and Test (`ci.yml`)
 
 Triggers on push/PR to main or develop branches:
