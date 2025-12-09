@@ -38,6 +38,7 @@ jobs:
     - name: Install Copacetic
       run: |
         # Install copa CLI - get latest release
+        # Note: For production, add checksum verification for security
         COPA_VERSION=$(curl -sL https://api.github.com/repos/project-copacetic/copacetic/releases/latest | grep '"tag_name"' | sed -E 's/.*"v([^"]+)".*/\1/')
         if [ -z "$COPA_VERSION" ]; then
           echo "Failed to fetch Copa version, using fallback"
