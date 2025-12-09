@@ -25,7 +25,7 @@ jobs:
         docker build -t python-webapp:scan .
     
     - name: Run Trivy vulnerability scanner on filesystem
-      uses: aquasecurity/trivy-action@master
+      uses: aquasecurity/trivy-action@0.28.0
       with:
         scan-type: 'fs'
         scan-ref: '.'
@@ -33,7 +33,7 @@ jobs:
         output: 'trivy-fs-results.sarif'
         
     - name: Run Trivy vulnerability scanner on Docker image
-      uses: aquasecurity/trivy-action@master
+      uses: aquasecurity/trivy-action@0.28.0
       with:
         image-ref: 'python-webapp:scan'
         format: 'sarif'
@@ -54,7 +54,7 @@ jobs:
         category: 'trivy-image'
         
     - name: Run Trivy vulnerability scanner (Table format)
-      uses: aquasecurity/trivy-action@master
+      uses: aquasecurity/trivy-action@0.28.0
       with:
         image-ref: 'python-webapp:scan'
         format: 'table'

@@ -41,7 +41,7 @@ jobs:
                    ${{ secrets.ACR_NAME }}.azurecr.io/python-webapp:latest
         
     - name: Run Trivy vulnerability scanner
-      uses: aquasecurity/trivy-action@master
+      uses: aquasecurity/trivy-action@0.28.0
       with:
         image-ref: '${{ secrets.ACR_NAME }}.azurecr.io/python-webapp:${{ env.IMAGE_TAG }}'
         format: 'json'
@@ -49,8 +49,15 @@ jobs:
         
     - name: Install Copacetic
       run: |
-        wget https://github.com/project-copacetic/copacetic/releases/latest/download/copa_0.7.0_linux_amd64.tar.gz
-        tar -xzf copa_0.7.0_linux_amd64.tar.gz
+        # Install copa CLI - get latest release
+        COPA_VERSION=$(curl -sL https://api.github.com/repos/project-copacetic/copacetic/releases/latest | grep '"tag_name"' | sed -E 's/.*"v([^"]+)".*/\1/')
+        if [ -z "$COPA_VERSION" ]; then
+          echo "Failed to fetch Copa version, using fallback"
+          COPA_VERSION="0.7.0"
+        fi
+        echo "Installing Copa version: $COPA_VERSION"
+        wget https://github.com/project-copacetic/copacetic/releases/latest/download/copa_${COPA_VERSION}_linux_amd64.tar.gz
+        tar -xzf copa_${COPA_VERSION}_linux_amd64.tar.gz
         sudo mv copa /usr/local/bin/
         
     - name: Install buildkit
@@ -62,16 +69,28 @@ jobs:
         # Export image to tar
         docker save ${{ secrets.ACR_NAME }}.azurecr.io/python-webapp:${{ env.IMAGE_TAG }} -o python-webapp.tar
         
-        # Patch the image
+        # Patch the image - Copa may not patch all vulnerabilities
+        # It primarily patches OS-level vulnerabilities
+        set +e
         copa patch \
           -i python-webapp.tar \
           -r trivy-report.json \
           -t ${{ secrets.ACR_NAME }}.azurecr.io/python-webapp:${{ env.IMAGE_TAG }}-patched \
-          -a tcp://127.0.0.1:8888 || echo "Copa patching completed"
-          
-        # Tag patched image as latest
-        docker tag ${{ secrets.ACR_NAME }}.azurecr.io/python-webapp:${{ env.IMAGE_TAG }}-patched \
-                   ${{ secrets.ACR_NAME }}.azurecr.io/python-webapp:latest
+          -a tcp://127.0.0.1:8888
+        COPA_EXIT_CODE=$?
+        set -e
+        
+        if [ $COPA_EXIT_CODE -eq 0 ]; then
+          echo "✓ Copa patching completed successfully"
+          # Tag patched image as latest
+          docker tag ${{ secrets.ACR_NAME }}.azurecr.io/python-webapp:${{ env.IMAGE_TAG }}-patched \
+                     ${{ secrets.ACR_NAME }}.azurecr.io/python-webapp:latest
+        else
+          echo "⚠ Copa patching completed with warnings (exit code: $COPA_EXIT_CODE)"
+          echo "Using original image as latest"
+          docker tag ${{ secrets.ACR_NAME }}.azurecr.io/python-webapp:${{ env.IMAGE_TAG }} \
+                     ${{ secrets.ACR_NAME }}.azurecr.io/python-webapp:latest
+        fi
         
     - name: Push images to ACR
       run: |

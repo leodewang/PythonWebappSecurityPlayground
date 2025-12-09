@@ -28,6 +28,16 @@ A comprehensive container security playground demonstrating the holistic process
     └── azure-deploy.yml       # Azure deployment
 ```
 
+## Quick Start
+
+**📋 For detailed setup instructions, see [SETUP.md](SETUP.md)**
+
+The setup guide includes:
+- Step-by-step Azure resource creation
+- GitHub secrets configuration
+- Verification steps
+- Troubleshooting tips
+
 ## Prerequisites
 
 ### Azure Resources

@@ -16,6 +16,8 @@ spec:
     spec:
       containers:
       - name: python-webapp
+        # Note: The placeholders ${ACR_NAME} and ${IMAGE_TAG} are replaced by sed in the GitHub Actions workflow
+        # For production, consider using Helm or Kustomize for better configuration management
         image: ${ACR_NAME}.azurecr.io/python-webapp:${IMAGE_TAG}
         ports:
         - containerPort: 8080
